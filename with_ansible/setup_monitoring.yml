@@ -1,0 +1,135 @@
+---
+- name: Set up Prometheus, Grafana, and Node Exporter on EC2 instances
+  hosts: all
+  become: yes
+  tasks:
+    # Install Docker on all instances
+    - name: Update system packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Install prerequisites for Docker
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+
+    - name: Add Docker GPG key
+      ansible.builtin.shell: |
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+      args:
+        creates: /usr/share/keyrings/docker-archive-keyring.gpg
+
+    - name: Add Docker repository
+      ansible.builtin.shell: |
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+      args:
+        creates: /etc/apt/sources.list.d/docker.list
+
+    - name: Install Docker
+      apt:
+        update_cache: yes
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    # Set up Node Exporter on all instances
+    - name: Run Node Exporter container
+      docker_container:
+        name: node_exporter
+        image: prom/node-exporter:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "9100:9100"
+
+- name: Set up Prometheus and Grafana on monitoring server
+  hosts: monitoring
+  become: yes
+  tasks:
+    # Create directories for Prometheus and Grafana
+    - name: Create directories for Prometheus and Grafana
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ (item == '/home/ubuntu/monitoring/prometheus') | ternary(65534, 472) }}"
+        group: "{{ (item == '/home/ubuntu/monitoring/prometheus') | ternary(65534, 472) }}"
+      loop:
+        - /home/ubuntu/monitoring/prometheus
+        - /home/ubuntu/monitoring/grafana
+
+    # Create Prometheus configuration file
+    - name: Create Prometheus configuration file
+      copy:
+        content: |
+          global:
+            scrape_interval: 15s
+            evaluation_interval: 15s
+
+          scrape_configs:
+            - job_name: 'prometheus'
+              static_configs:
+                - targets: ['localhost:9090']
+            - job_name: 'node_exporter_monitoring'
+              static_configs:
+                - targets: ['localhost:9100']
+            - job_name: 'node_exporter_targets'
+              static_configs:
+                - targets: ['54.159.53.106:9100', '54.81.204.21:9100']
+        dest: /home/ubuntu/monitoring/prometheus/prometheus.yml
+        owner: 65534
+        group: 65534
+
+    # Create Docker network
+    - name: Create Docker network
+      docker_network:
+        name: monitoring-network
+        state: present
+
+    # Run Prometheus container
+    - name: Run Prometheus container
+      docker_container:
+        name: prometheus
+        image: prom/prometheus:latest
+        state: started
+        restart_policy: always
+        networks:
+          - name: monitoring-network
+        ports:
+          - "9090:9090"
+        volumes:
+          - /home/ubuntu/monitoring/prometheus:/etc/prometheus
+
+    # Run Grafana container
+    - name: Run Grafana container
+      docker_container:
+        name: grafana
+        image: grafana/grafana:latest
+        state: started
+        restart_policy: always
+        networks:
+          - name: monitoring-network
+        ports:
+          - "3000:3000"
+        volumes:
+          - /home/ubuntu/monitoring/grafana:/var/lib/grafana
+        env:
+          GF_SECURITY_ADMIN_PASSWORD: "Gberekanmi@2015?"
