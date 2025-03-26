@@ -10,6 +10,7 @@
 - **Node Exporter**: Exposes system metrics from each EC2 instance.
 - **Grafana**: Visualizes metrics in dashboards.
 - **Docker**: Simplifies deployment and management.
+- **Ansible**: Configuration management
 - **Environment**: Ubuntu 22.04 on AWS EC2.
 
 ## Visualization
