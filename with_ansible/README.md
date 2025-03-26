@@ -61,7 +61,7 @@
 
 1. **Create Inventory File:**
    ```bash
-   nano ~/inventory.ini
+   vi ~/inventory.ini
    ```
    Add:
    ```ini
@@ -73,10 +73,16 @@
    54.81.204.21 ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/your-key.pem
    ```
 
+![image](https://github.com/user-attachments/assets/fa624660-4076-4350-aa50-56946a94e75e)
+
+
 2. **Test Connectivity:**
    ```bash
    ansible all -i ~/inventory.ini -m ping
    ```
+
+![image](https://github.com/user-attachments/assets/b549f42f-d1bb-4748-8fa5-5eda1d184c76)
+
 
 ## Procedure 3: Create and Run Ansible Playbook
 
@@ -230,6 +236,9 @@
    ansible-playbook -i ~/inventory.ini ~/setup_monitoring.yml
    ```
 
+![image](https://github.com/user-attachments/assets/52958091-5372-4a08-98d2-f095a99b2ba4)
+
+
 ## Procedure 4: Configure Grafana Dashboard
 
 1. **Access Grafana:**
@@ -274,12 +283,18 @@
    - Go to **Dashboards** > **New** > **Import**.
    - Use ID `1860` (Node Exporter Full Dashboard) from grafana.com.
    - Select your Prometheus data source and import.
+  
+   ![image](https://github.com/user-attachments/assets/0226cbd0-2c70-424b-8c60-396c6621b401)
+
 
 ## Procedure 5: Verify the Setup
 
 1. **Verify Prometheus Targets:**
    - Open `http://52.200.27.51:9090/targets`.
    - Ensure all targets (`localhost:9090`, `localhost:9100`, `54.159.53.106:9100`, `54.81.204.21:9100`) are “UP”.
+  
+  ![image](https://github.com/user-attachments/assets/edefbabf-abdb-4070-8736-3e2127847315)
+
 
 2. **Verify Grafana Dashboard:**
    - Open `http://52.200.27.51:3000`.
@@ -291,6 +306,9 @@
      ssh -i ~/.ssh/your-key.pem ubuntu@54.159.53.106
      curl http://localhost:9100/metrics
      ```
+
+  ![image](https://github.com/user-attachments/assets/a0eba6df-0108-4df6-b024-376f9bdbb5bc)
+
 
 ## Procedure 6: Secure the Setup
 
